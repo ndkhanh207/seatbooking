@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "747116458074",
+    "project_id": "seat-booking-467d0",
+    "storage_bucket": "seat-booking-467d0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:747116458074:android:74d728f96845091645e863",
+        "android_client_info": {
+          "package_name": "com.example.movie_ticket"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "747116458074-7r09oaajmerak9si7mpbcgksfubbkbbq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDYRPDG5fP9cgoqD2X0lQcRHi8t5AUU2N4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "747116458074-7r09oaajmerak9si7mpbcgksfubbkbbq.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "747116458074-thn2ctnhqnklu3btksppf21dlh2l360j.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.movieticketbookingapp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
