@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:movie_ticket/controller/auth_controller.dart';
 import 'package:movie_ticket/controller/movie_controller.dart';
 import 'package:movie_ticket/model/movie.dart';
+import 'package:movie_ticket/pages/movie_detail_page.dart';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -127,38 +128,44 @@ class _HomePageState extends State<HomePage> {
               ),
             );
           }
-          return CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(child: _buildHeader()),
-              SliverToBoxAdapter(child: _buildSearchBar()),
-              if (ctrl.featuredMovies.isNotEmpty) ...[
+          return RefreshIndicator(
+            onRefresh: ctrl.fetchMovies,
+            color: _accent,
+            backgroundColor: _card,
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(child: _buildHeader()),
+                SliverToBoxAdapter(child: _buildSearchBar()),
+                if (ctrl.featuredMovies.isNotEmpty) ...[
+                  SliverToBoxAdapter(
+                    child: _buildSectionLabel('Now Playing', onSeeAll: () {}),
+                  ),
+                  SliverToBoxAdapter(child: _buildFeaturedCarousel()),
+                  SliverToBoxAdapter(child: _buildPageIndicator()),
+                ],
+                SliverToBoxAdapter(child: _buildGenreChips()),
                 SliverToBoxAdapter(
-                  child: _buildSectionLabel('Now Playing', onSeeAll: () {}),
+                  child: _buildSectionLabel('All Movies', onSeeAll: () {}),
                 ),
-                SliverToBoxAdapter(child: _buildFeaturedCarousel()),
-                SliverToBoxAdapter(child: _buildPageIndicator()),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  sliver: SliverGrid(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) =>
+                          _buildMovieCard(ctrl.popularMovies[index], index),
+                      childCount: ctrl.popularMovies.length,
+                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                          childAspectRatio: 0.62,
+                        ),
+                  ),
+                ),
               ],
-              SliverToBoxAdapter(child: _buildGenreChips()),
-              SliverToBoxAdapter(
-                child: _buildSectionLabel('All Movies', onSeeAll: () {}),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                sliver: SliverGrid(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) =>
-                        _buildMovieCard(ctrl.popularMovies[index], index),
-                    childCount: ctrl.popularMovies.length,
-                  ),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    childAspectRatio: 0.62,
-                  ),
-                ),
-              ),
-            ],
+            ),
           );
         }),
       ),
@@ -302,145 +309,149 @@ class _HomePageState extends State<HomePage> {
           final movie = featured[index];
           final isActive = index == _featuredPage;
           final bgColor = _cardColors[index % _cardColors.length];
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            margin: EdgeInsets.symmetric(
-              horizontal: 8,
-              vertical: isActive ? 0 : 12,
-            ),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              color: bgColor,
-              boxShadow: isActive
-                  ? [
-                      BoxShadow(
-                        color: _accent.withOpacity(0.3),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      ),
-                    ]
-                  : [],
-            ),
-            child: Stack(
-              children: [
-                // Poster image
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: _posterImage(
-                    movie.posterUrl,
-                    width: double.infinity,
-                    height: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                // Dark overlay
-                Container(
-                  decoration: BoxDecoration(
+          return GestureDetector(
+            onTap: () => Get.to(() => MovieDetailPage(movie: movie)),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              margin: EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: isActive ? 0 : 12,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                color: bgColor,
+                boxShadow: isActive
+                    ? [
+                        BoxShadow(
+                          color: _accent.withOpacity(0.3),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ]
+                    : [],
+              ),
+              child: Stack(
+                children: [
+                  // Poster image
+                  ClipRRect(
                     borderRadius: BorderRadius.circular(20),
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withOpacity(0.85),
-                      ],
+                    child: _posterImage(
+                      movie.posterUrl,
+                      width: double.infinity,
+                      height: double.infinity,
+                      fit: BoxFit.cover,
                     ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
+                  // Dark overlay
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.85),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _accent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            'NOW PLAYING',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                        decoration: BoxDecoration(
-                          color: _accent,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          'NOW PLAYING',
-                          style: TextStyle(
+                        const SizedBox(height: 4),
+                        Text(
+                          movie.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 10,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        movie.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                        const SizedBox(height: 4),
+                        Text(
+                          movie.description,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        movie.description,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 11,
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.access_time_rounded,
+                              color: Colors.white54,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                movie.durationFormatted,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              onPressed: () =>
+                                  Get.to(() => MovieDetailPage(movie: movie)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _accent,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: const Text(
+                                'Book Now',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.access_time_rounded,
-                            color: Colors.white54,
-                            size: 14,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              movie.durationFormatted,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white54,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: () {},
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _accent,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: const Text(
-                              'Book Now',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },
@@ -514,7 +525,7 @@ class _HomePageState extends State<HomePage> {
   Widget _buildMovieCard(Movie movie, int index) {
     final bgColor = _cardColors[index % _cardColors.length];
     return GestureDetector(
-      onTap: () {},
+      onTap: () => Get.to(() => MovieDetailPage(movie: movie)),
       child: Container(
         decoration: BoxDecoration(
           color: _card,
@@ -630,7 +641,8 @@ class _HomePageState extends State<HomePage> {
                         ),
                         const Spacer(),
                         GestureDetector(
-                          onTap: () {},
+                          onTap: () =>
+                              Get.to(() => MovieDetailPage(movie: movie)),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -681,11 +693,22 @@ class _HomePageState extends State<HomePage> {
         child: const Icon(Icons.movie_rounded, color: Colors.white12, size: 48),
       );
     }
+
+    // Add cache key to bust cache only when data is refreshed
+    final cacheBustedUrl = url.contains('?')
+        ? '$url&v=${ctrl.cacheKey.value}'
+        : '$url?v=${ctrl.cacheKey.value}';
+
     return Image.network(
-      url,
+      cacheBustedUrl,
       width: width,
       height: height,
       fit: fit,
+      headers: const {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
       loadingBuilder: (_, child, progress) => progress == null
           ? child
           : Container(
