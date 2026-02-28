@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:movie_ticket/model/movie.dart';
+import 'package:movie_ticket/pages/cinema_selection_page.dart';
 
 const _bg = Color(0xFF1A1A2E);
 const _card = Color(0xFF16213E);
@@ -208,16 +209,8 @@ class MovieDetailPage extends StatelessWidget {
             height: 56,
             child: ElevatedButton(
               onPressed: () {
-                // Navigate to seat selection
-                Get.snackbar(
-                  'Coming Soon',
-                  'Seat booking feature will be available soon!',
-                  backgroundColor: _card,
-                  colorText: Colors.white,
-                  snackPosition: SnackPosition.BOTTOM,
-                  margin: const EdgeInsets.all(20),
-                  borderRadius: 12,
-                );
+                // Navigate to cinema selection
+                Get.to(() => CinemaSelectionPage(movie: movie));
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: _accent,
