@@ -42,7 +42,7 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                                 .requestMatchers("/api/auth/**").permitAll()
 //                                .requestMatchers("/api/admin/**").permitAll()
-                                .requestMatchers(HttpMethod.GET, "/api/movies/", "/api/showtime/{movieId}").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/movies/", "/api/showtime/{movieId}", "/api/cinema/").permitAll()
                                 .requestMatchers("/uploads/**").permitAll()
                                 .requestMatchers("/test").permitAll()
                                 .anyRequest().authenticated()

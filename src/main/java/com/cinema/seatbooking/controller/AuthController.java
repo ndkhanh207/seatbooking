@@ -16,7 +16,6 @@ public class AuthController {
 
     public AuthController(AuthService authService) {
         this.authService = authService;
-
     }
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<Map<String, Object>>> login(@RequestBody LoginRequest request) {
@@ -28,7 +27,4 @@ public class AuthController {
                     .body(ApiResponse.error(e.getMessage()));
         }
     }
-
-
-
 }
