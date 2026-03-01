@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:movie_ticket/model/movie.dart';
 import 'package:movie_ticket/model/cinema.dart';
+import 'package:movie_ticket/model/seat.dart';
+import 'package:movie_ticket/service/seat_service.dart';
 import 'package:intl/intl.dart';
 
 const _bg = Color(0xFF1A1A2E);
@@ -29,32 +31,68 @@ class SeatSelectionPage extends StatefulWidget {
 }
 
 class _SeatSelectionPageState extends State<SeatSelectionPage> {
-  // 8 rows x 12 columns
   final Map<String, SeatStatus> seats = {};
-  late List<String> rows;
-  late List<int> columns;
+  final Map<String, Seat> seatMeta = {};
+  List<String> rows = [];
+  List<int> columns = [];
+  bool _isLoading = true;
+  String _error = '';
 
   @override
   void initState() {
     super.initState();
-    rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-    columns = List.generate(12, (i) => i + 1);
+    _loadSeats();
+  }
 
-    // Initialize all seats as available
-    for (var row in rows) {
-      for (var col in columns) {
-        seats['$row$col'] = SeatStatus.available;
+  Future<void> _loadSeats() async {
+    setState(() {
+      _isLoading = true;
+      _error = '';
+    });
+
+    try {
+      // Find the room by matching the showtime's roomName with cinema's rooms
+      final room = widget.cinema.rooms.firstWhere(
+        (r) => r.name == widget.showtime.roomName,
+        orElse: () =>
+            throw Exception('Room not found: ${widget.showtime.roomName}'),
+      );
+
+      final apiSeats = await SeatService.fetchSeatsByRoom(room.id);
+
+      final rowSet = <String>{};
+      final colSet = <int>{};
+
+      seats.clear();
+      seatMeta.clear();
+
+      for (final apiSeat in apiSeats) {
+        if (apiSeat.row.isEmpty || apiSeat.number == 0) {
+          continue;
+        }
+
+        final key = '${apiSeat.row}${apiSeat.number}';
+        rowSet.add(apiSeat.row);
+        colSet.add(apiSeat.number);
+        seatMeta[key] = apiSeat;
+        seats[key] = apiSeat.isActive
+            ? SeatStatus.available
+            : SeatStatus.occupied;
       }
-    }
 
-    // Mark some seats as occupied (sample data)
-    seats['C5'] = SeatStatus.occupied;
-    seats['C6'] = SeatStatus.occupied;
-    seats['D7'] = SeatStatus.occupied;
-    seats['E5'] = SeatStatus.occupied;
-    seats['E6'] = SeatStatus.occupied;
-    seats['E7'] = SeatStatus.occupied;
-    seats['F8'] = SeatStatus.occupied;
+      setState(() {
+        rows = rowSet.toList()..sort();
+        columns = colSet.toList()..sort();
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   List<String> get selectedSeats => seats.entries
@@ -65,6 +103,7 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
   double get totalPrice => selectedSeats.length * widget.showtime.price;
 
   void _toggleSeat(String seatId) {
+    if (!seats.containsKey(seatId)) return;
     if (seats[seatId] == SeatStatus.occupied) return;
     setState(() {
       seats[seatId] = seats[seatId] == SeatStatus.selected
@@ -99,17 +138,7 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
           const SizedBox(height: 20),
           _buildScreen(),
           const SizedBox(height: 30),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  _buildSeatingChart(),
-                  const SizedBox(height: 20),
-                  _buildLegend(),
-                ],
-              ),
-            ),
-          ),
+          Expanded(child: _buildSeatContent()),
         ],
       ),
       bottomNavigationBar: _buildBottomBar(),
@@ -232,54 +261,131 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
     );
   }
 
+  Widget _buildSeatContent() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator(color: _accent));
+    }
+
+    if (_error.isNotEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.wifi_off_rounded,
+                color: Colors.white38,
+                size: 52,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Could not load seats',
+                style: TextStyle(color: Colors.white70, fontSize: 16),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                _error,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white38, fontSize: 12),
+              ),
+              const SizedBox(height: 14),
+              ElevatedButton.icon(
+                onPressed: _loadSeats,
+                style: ElevatedButton.styleFrom(backgroundColor: _accent),
+                icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+                label: const Text(
+                  'Retry',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (seats.isEmpty) {
+      return const Center(
+        child: Text(
+          'No seats found for this room',
+          style: TextStyle(color: Colors.white54),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadSeats,
+      color: _accent,
+      backgroundColor: _card,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          children: [
+            _buildSeatingChart(),
+            const SizedBox(height: 20),
+            _buildLegend(),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildSeatingChart() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        children: rows.map((row) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Row label
-                SizedBox(
-                  width: 20,
-                  child: Text(
-                    row,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white54,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          children: rows.map((row) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Row label
+                  SizedBox(
+                    width: 20,
+                    child: Text(
+                      row,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                // Seats
-                ...columns.map((col) {
-                  final seatId = '$row$col';
-                  final status = seats[seatId]!;
+                  const SizedBox(width: 8),
+                  // Seats
+                  ...columns.map((col) {
+                    final seatId = '$row$col';
+                    final status = seats[seatId];
 
-                  // Add aisle space after column 6
-                  final spacer = col == 6
-                      ? const SizedBox(width: 16)
-                      : const SizedBox(width: 8);
+                    if (status == null) {
+                      return const SizedBox(width: 32);
+                    }
 
-                  return Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () => _toggleSeat(seatId),
-                        child: _buildSeat(status),
-                      ),
-                      spacer,
-                    ],
-                  );
-                }).toList(),
-              ],
-            ),
-          );
-        }).toList(),
+                    // Add aisle space at center
+                    final spacer = col == (columns.length ~/ 2)
+                        ? const SizedBox(width: 16)
+                        : const SizedBox(width: 8);
+
+                    return Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => _toggleSeat(seatId),
+                          child: _buildSeat(status),
+                        ),
+                        spacer,
+                      ],
+                    );
+                  }).toList(),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
       ),
     );
   }
